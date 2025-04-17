@@ -6,9 +6,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Loader2, Upload, Music } from "lucide-react"
+import { Loader2, Upload, Music, AlertCircle } from "lucide-react"
 import { generateMusicFromImage } from "@/app/actions"
 import AudioPlayer from "@/components/audio-player"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ImageToMusic() {
   const [image, setImage] = useState<File | null>(null)
@@ -17,6 +18,7 @@ export default function ImageToMusic() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [step, setStep] = useState<"upload" | "describing" | "generating" | "playing">("upload")
+  const [error, setError] = useState<string | null>(null)
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -26,6 +28,7 @@ export default function ImageToMusic() {
       setStep("upload")
       setAudioUrl(null)
       setDescription("")
+      setError(null)
     }
   }
 
@@ -33,6 +36,7 @@ export default function ImageToMusic() {
     if (!image) return
 
     setIsGenerating(true)
+    setError(null)
     setStep("describing")
 
     try {
@@ -41,17 +45,21 @@ export default function ImageToMusic() {
 
       const result = await generateMusicFromImage(formData)
 
-      if (result.description) {
-        setDescription(result.description)
-        setStep("generating")
-      }
+      setDescription(result.description ?? "")
+      setStep("generating")
+
+      setAudioUrl(result.audioUrl ?? null)
 
       if (result.audioUrl) {
-        setAudioUrl(result.audioUrl)
         setStep("playing")
+      } else {
+        setError("Failed to retrieve audio URL after description.")
+        setStep("upload")
       }
-    } catch (error) {
-      console.error("Error generating music:", error)
+    } catch (err) {
+      console.error("Error generating music:", err)
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+      setStep("upload")
     } finally {
       setIsGenerating(false)
     }
@@ -59,7 +67,15 @@ export default function ImageToMusic() {
 
   return (
     <div className="container max-w-4xl mx-auto py-10 px-4">
-      <h1 className="text-3xl font-bold text-center mb-8">Image to Music Generator</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">Synesthesia.ai</h1>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card className="p-6 mb-8">
         <div className="flex flex-col items-center gap-6">
@@ -99,14 +115,14 @@ export default function ImageToMusic() {
         </div>
       </Card>
 
-      {description && (
+      {description && !error && (
         <Card className="p-6 mb-8">
           <h2 className="text-xl font-semibold mb-2">Image Description</h2>
           <p className="text-gray-700 dark:text-gray-300">{description}</p>
         </Card>
       )}
 
-      {audioUrl && (
+      {audioUrl && !error && (
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4">Generated Music</h2>
           <AudioPlayer audioUrl={audioUrl} />
