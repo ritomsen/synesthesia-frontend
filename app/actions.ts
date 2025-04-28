@@ -1,10 +1,6 @@
 "use server"
 
-import { openai } from "@ai-sdk/openai"
-import { generateText } from "ai"
 
-// Define the base URL for your backend API
-// It's best practice to use an environment variable for this
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export async function generateMusicFromImage(formData: FormData) {
@@ -19,12 +15,11 @@ export async function generateMusicFromImage(formData: FormData) {
   let audioUrl: string | null = null;
 
   try {
-    // Step 1: Call the backend to describe the image
+    // Call backend to describe the image
     console.log("Sending image to backend for description...");
     const describeResponse = await fetch(`${BACKEND_URL}/describe-image-musically`, {
       method: 'POST',
-      body: formData, // Send the whole FormData, FastAPI handles the file
-      // No 'Content-Type' header needed; fetch sets it correctly for FormData
+      body: formData,
     });
 
     if (!describeResponse.ok) {
